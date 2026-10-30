@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER=evalcrest
+      POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      POSTGRES_DB=evalcrest
+    ports:
+      -"5434:5432"
+    volumes:
+      - evalcrest_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evalcrest -d evalcrest"]
+      interval: 5s
+      timeout: 30s
+      retries: 10
+
+volumes:
+  evalcrest_pgdata:
