@@ -1,6 +1,9 @@
+from typing import Any
+
 import httpx
 
 from evalcrest.config import Settings
+from evalcrest.graph.state import Citation
 
 
 class StudyBuddyAuthError(Exception):
@@ -51,3 +54,18 @@ class StudyBuddyAdapter:
 
         response.raise_for_status()
         self._token = response.json()["access_token"]
+
+
+def map_sources(sources: list[dict[str, Any]]) -> list[Citation]:
+    citations: list[Citation] = []
+    for source in sources:
+        source_type = source.get("source_type")
+        if source_type == "pdf":
+            page = source.get("page")
+            citations.append(Citation(source_id=f"{source.get('filename')}:p{page}", page=page))
+        elif source_type == "pptx":
+            citations.append(Citation(source_id=f"slide{source.get('slide')}"))
+        else:
+            source_id = source.get("link") or source.get("source_url") or f"{source_type}:unknown"
+            citations.append(Citation(source_id=source_id))
+    return citations

@@ -1,9 +1,12 @@
+from typing import Any
+
 import httpx
 import pytest
 import respx
 
 from evalcrest.config import Settings
-from evalcrest.targets.studybuddy import StudyBuddyAdapter, StudyBuddyAuthError
+from evalcrest.graph.state import Citation
+from evalcrest.targets.studybuddy import StudyBuddyAdapter, StudyBuddyAuthError, map_sources
 
 BASE = "http://test"
 
@@ -81,3 +84,33 @@ async def test_login_rejected_raises_without_leaking_password(settings: Settings
         ) as exc_info:
             await adapter.login()
     assert "not-a-real-password" not in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        (
+            {"source_type": "pdf", "filename": "physics_notes.pdf", "page": 2, "link": None},
+            Citation(source_id="physics_notes.pdf:p2", page=2),
+        ),
+        (
+            {"source_type": "pptx", "slide": 3, "filename": None, "page": None},
+            Citation(source_id="slide3"),
+        ),
+        (
+            {"source_type": "web", "link": "https://example.com/newton", "source_url": None},
+            Citation(source_id="https://example.com/newton"),
+        ),
+        (
+            {"source_type": "youtube", "link": None, "source_url": None},
+            Citation(source_id="youtube:unknown"),
+        ),
+    ],
+    ids=["pdf", "pptx", "web", "unknown-type-kept"],
+)
+def test_map_sources(source: dict[str, Any], expected: Citation) -> None:
+    assert map_sources([source]) == [expected]
+
+
+def test_map_sources_empty_list() -> None:
+    assert map_sources([]) == []
