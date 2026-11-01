@@ -32,3 +32,22 @@ class StudyBuddyAdapter:
         except httpx.HTTPError:
             return False
         return response.status_code == 200
+
+    async def login(self) -> None:
+        response = await self._client.post(
+            "/auth/login",
+            data={
+                "username": self._settings.studybuddy_username,
+                "password": self._settings.studybuddy_password.get_secret_value(),
+            },
+        )
+
+        username = self._settings.studybuddy_username
+
+        if response.status_code in (401, 403):
+            raise StudyBuddyAuthError(
+                f"login rejected for user '{username}' (HTTP {response.status_code})"
+            )
+
+        response.raise_for_status()
+        self._token = response.json()["access_token"]
