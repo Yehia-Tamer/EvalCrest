@@ -1,9 +1,10 @@
+import time
 from typing import Any
 
 import httpx
 
 from evalcrest.config import Settings
-from evalcrest.graph.state import Citation
+from evalcrest.graph.state import CaseInput, Citation, TargetResponse
 
 
 class StudyBuddyAuthError(Exception):
@@ -54,6 +55,38 @@ class StudyBuddyAdapter:
 
         response.raise_for_status()
         self._token = response.json()["access_token"]
+
+    async def ask(self, case_input: CaseInput) -> TargetResponse:
+        if self._token is None:
+            await self.login()
+
+        headers = {"Authorization": f"Bearer {self._token}"}
+
+        response = await self._client.post(
+            "/conversations/",
+            json={"document_id": self._settings.studybuddy_document_id},
+            headers=headers,
+        )
+
+        conversation_id = response.json()["id"]
+
+        start_time = time.perf_counter()
+        response = await self._client.post(
+            f"/conversations/{conversation_id}/messages",
+            json={"content": case_input.question},
+            headers=headers,
+        )
+        latency_ms = int((time.perf_counter() - start_time) * 1000)
+
+        body = response.json()
+
+        return TargetResponse(
+            status="ok",
+            http_status=response.status_code,
+            answer=body["content"],
+            citations=map_sources(body.get("sources", [])),
+            latency_ms=latency_ms,
+        )
 
 
 def map_sources(sources: list[dict[str, Any]]) -> list[Citation]:
