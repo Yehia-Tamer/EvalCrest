@@ -41,9 +41,12 @@ class StudyBuddyAdapter:
                 "password": self._settings.studybuddy_password.get_secret_value(),
             },
         )
+
+        username = self._settings.studybuddy_username
+
         if response.status_code in (401, 403):
             raise StudyBuddyAuthError(
-                f"login rejected for user {self._settings.studybuddy_username!r} (HTTP {response.status_code})"
+                f"login rejected for user {username} (HTTP {response.status_code})"
             )
 
         response.raise_for_status()
