@@ -45,9 +45,7 @@ class StudyBuddyAdapter:
         username = self._settings.studybuddy_username
 
         if response.status_code in (401, 403):
-            raise StudyBuddyAuthError(
-                f"login rejected for user {username} (HTTP {response.status_code})"
-            )
+            raise StudyBuddyAuthError(f"login rejected for user '{username}'")
 
         response.raise_for_status()
         self._token = response.json()["access_token"]
